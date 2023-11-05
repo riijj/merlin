@@ -46,8 +46,11 @@ jobs:
         id: build_agents
         working-directory: /home/runner/work/merlin-agent
         run: |
-          pwd
-          make distro
+          VERSION=$(cat ./core/core.go |grep "var Version ="|cut -d"\"" -f2)
+          BUILD=$(git rev-parse HEAD)
+          DIR=bin/v${VERSION}/${BUILD}
+          make all
+          mv $DIR/merlinAgent-* .
 
       - name: Build Merlin Agent DLL
         id: build_agent_dll
@@ -60,11 +63,11 @@ jobs:
         run: |
           mkdir -p data/bin
           cp /home/runner/work/merlin-agent/merlinAgent-* ./data/bin
-          cp /home/runner/work/merlin-agent-dll/merlinAgent.dll ./data/bin
+          cp /home/runner/work/merlin-agent-dll/merlin.dll ./data/bin
 
       - name: Build Merlin CLI
         id: build_cli
-        working-directory: /homer/runner/work/merlin-cli
+        working-directory: /home/runner/work/merlin-cli
         run: make all
 
       - name: Move Merlin CLI
@@ -80,10 +83,17 @@ jobs:
 
       - name: Package Release
         id: package_release
-        working-directory: merlin
+        working-directory: /home/runner/work/merlin/merlin
         run: |
-          F="README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/log/README.MD data/x509 data/src data/bin"
-          7za a -pmerlin -mhe -mx=9 merlinServer-Linux-x64.7z $F merlinCLI-Linux-x64 merlinServer-Linux-x64
+          VERSION=$(cat pkg/merlin.go |grep "const Version ="|cut -d"\"" -f2)
+          BUILD=$(git rev-parse HEAD)
+          DIR=data/temp/v${VERSION}/${BUILD}
+          cp docs/CHANGELOG.MD .
+          cp $DIR/merlinServer* .
+          F="LICENSE data/modules CHANGELOG.MD data/README.MD data/agents/README.MD data/log/README.MD data/x509 data/src data/bin"
+          7za a -pmerlin -mhe -mx=9 merlinServer-Linux-x64.7z $F merlinServer-Linux-x64
+          7za a -pmerlin -mhe -mx=9 merlinServer-Darwin-x64.7z $F merlinServer-Darwin-x64
+          7za a -pmerlin -mhe -mx=9 merlinServer-Windows-x64.7z $F merlinServer-Windows-x64.exe
 
       - name: Create Draft Release
         id: create_draft_release
